@@ -1,0 +1,56 @@
+# === Entorno virtual ===
+venv/
+ENV/
+env/
+.venv/
+
+# === Archivos de Python ===
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+*.egg-info/
+*.log
+
+# === Configuración local ===
+*.env
+.env.*
+.DS_Store
+*.sqlite3
+*.db
+.idea/
+.vscode/
+*.bak
+*.swp
+
+# === Archivos de pruebas ===
+.coverage
+pytest_cache/
+htmlcov/
+.tox/
+.mypy_cache/
+
+# === Archivos de dependencias compiladas ===
+*.so
+*.dll
+*.dylib
+
+# === Configuración de sistema operativo ===
+Thumbs.db
+desktop.ini
+
+# === Docker (si más adelante lo usas) ===
+*.pid
+*.tar
+*.log
+*.tmp
+docker-compose.override.yml
+
+# === FastAPI/uvicorn logs ===
+*.pid
+*.log
+
+# === Cache de dependencias ===
+pip-wheel-metadata/
+pip-log.txt
