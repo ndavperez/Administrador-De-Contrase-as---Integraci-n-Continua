@@ -1,5 +1,4 @@
-# models.py
-# Definición de las tablas de la base de datos
+
 
 from sqlalchemy import Column, Integer, String, ForeignKey, Text
 from sqlalchemy.orm import relationship

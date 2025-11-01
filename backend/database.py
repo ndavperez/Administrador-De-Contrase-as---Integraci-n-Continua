@@ -1,5 +1,3 @@
-# database.py
-# Configuración de conexión a la base de datos MySQL
 
 import os
 from sqlalchemy import create_engine
@@ -23,7 +21,6 @@ SesionLocal = sessionmaker(autocommit=False, autoflush=False, bind=motor)
 Base = declarative_base()
 
 def obtener_sesion():
-    """Devuelve una sesión de base de datos para usar en los endpoints"""
     db = SesionLocal()
     try:
         yield db

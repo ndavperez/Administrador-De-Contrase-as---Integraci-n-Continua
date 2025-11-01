@@ -1,5 +1,4 @@
-# rutas/credenciales.py
-# Rutas CRUD para las contraseñas de los servicios
+
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -26,7 +25,7 @@ def obtener_usuario_actual(token: str, db: Session):
     return usuario
 
 
-# --- Crear una nueva contraseña ---
+
 @router.post("/", response_model=ContrasenaMostrar, status_code=201)
 def crear_contrasena(datos: ContrasenaCrear, db: Session = Depends(obtener_sesion)):
     """Guarda una nueva contraseña cifrada en la base de datos."""
@@ -38,7 +37,7 @@ def crear_contrasena(datos: ContrasenaCrear, db: Session = Depends(obtener_sesio
         contrasena_cifrada=cifrada,
         url=datos.url,
         notas=datos.notas,
-        propietario_id=1  # temporal: más adelante se obtendrá desde el token
+        propietario_id=1  
     )
     
     db.add(nueva)
@@ -48,7 +47,7 @@ def crear_contrasena(datos: ContrasenaCrear, db: Session = Depends(obtener_sesio
     return nueva
 
 
-# --- Listar contraseñas ---
+
 @router.get("/", response_model=List[ContrasenaMostrar])
 def listar_contrasenas(buscar: Optional[str] = None, db: Session = Depends(obtener_sesion)):
     """Lista todas las contraseñas guardadas. Permite buscar por nombre del servicio."""

@@ -1,10 +1,9 @@
-# esquemas.py
-# Modelos Pydantic (entrada y salida de datos)
+
 
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 
-# ----- Usuario -----
+
 class UsuarioCrear(BaseModel):
     nombre: str
     apellido: str
@@ -20,12 +19,12 @@ class UsuarioMostrar(BaseModel):
     class Config:
         orm_mode = True
 
-# ----- Token -----
+
 class Token(BaseModel):
     token_acceso: str
     tipo_token: str
 
-# ----- Contraseñas -----
+
 class ContrasenaCrear(BaseModel):
     servicio: str
     usuario_servicio: str

@@ -1,5 +1,4 @@
-# main.py
-# Punto de inicio del backend: crea las tablas y levanta la API
+
 
 from fastapi import FastAPI
 from database import Base, motor

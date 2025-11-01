@@ -1,5 +1,4 @@
-# rutas/usuarios.py
-# Rutas relacionadas con registro y autenticación
+
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
