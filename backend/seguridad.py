@@ -6,9 +6,10 @@ from jose import jwt, JWTError
 from passlib.context import CryptContext
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
+from fastapi.security import OAuth2PasswordBearer
 
 load_dotenv()
-
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/usuarios/login")
 CLAVE_SECRETA = os.getenv("SECRET_KEY", "clave_temporal")
 ALGORITMO = os.getenv("ALGORITHM", "HS256")
 TIEMPO_EXPIRACION = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
@@ -19,7 +20,7 @@ if not CLAVE_FERNET:
     CLAVE_FERNET = Fernet.generate_key().decode()
 fernet = Fernet(CLAVE_FERNET.encode())
 
-contexto_pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+contexto_pwd = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 
 def crear_hash(contrasena: str) -> str:

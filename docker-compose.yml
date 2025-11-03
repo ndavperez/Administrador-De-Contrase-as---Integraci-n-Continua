@@ -1,0 +1,37 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:-vault}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-vaultpass}
+      POSTGRES_DB: ${DB_NAME:-vaultdb}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-vault} -d ${DB_NAME:-vaultdb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    env_file: .env
+    environment:
+      DB_USER: ${DB_USER:-vault}
+      DB_PASSWORD: ${DB_PASSWORD:-vaultpass}
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-vaultdb}
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+      FERNET_KEY: ${FERNET_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "5000:5000"   
+
+volumes:
+  pgdata:

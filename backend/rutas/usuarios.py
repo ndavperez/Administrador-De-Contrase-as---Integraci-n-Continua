@@ -7,13 +7,13 @@ from datetime import timedelta
 from esquemas import UsuarioCrear, UsuarioMostrar, Token
 from models import Usuario
 from seguridad import crear_hash, verificar_contrasena, crear_token
-from database import obtener_sesion
+from database import obtener_sesion 
+from sqlalchemy.exc import IntegrityError
 
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
 
 @router.post("/registro", response_model=UsuarioMostrar, status_code=201)
 def registrar_usuario(usuario: UsuarioCrear, db: Session = Depends(obtener_sesion)):
-    """Registrar un nuevo usuario."""
     existente = db.query(Usuario).filter(Usuario.correo == usuario.correo).first()
     if existente:
         raise HTTPException(status_code=400, detail="El correo ya está registrado.")
@@ -24,11 +24,19 @@ def registrar_usuario(usuario: UsuarioCrear, db: Session = Depends(obtener_sesio
         correo=usuario.correo,
         contrasena_hash=crear_hash(usuario.contrasena)
     )
-    db.add(nuevo_usuario)
-    db.commit()
-    db.refresh(nuevo_usuario)
+    try:
+        db.add(nuevo_usuario)
+        db.commit()
+        db.refresh(nuevo_usuario)
+    except IntegrityError:
+        db.rollback()
+        # Si hubo carrera o restricción única: 400 controlado
+        raise HTTPException(status_code=400, detail="El correo ya está registrado.")
+    except Exception as e:
+        db.rollback()
+        # 422/500 → mensaje claro
+        raise HTTPException(status_code=500, detail=f"Error al registrar usuario: {type(e).__name__}")
     return nuevo_usuario
-
 
 @router.post("/login", response_model=Token)
 def iniciar_sesion(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(obtener_sesion)):

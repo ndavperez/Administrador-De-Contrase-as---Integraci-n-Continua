@@ -1,8 +1,11 @@
 fastapi
 uvicorn[standard]
-SQLAlchemy
-pymysql
+SQLAlchemy>=2.0
+psycopg[binary]
 python-dotenv
-passlib[bcrypt]
+passlib
+bcrypt
 python-jose[cryptography]
 cryptography
+python-multipart
+pydantic[email]

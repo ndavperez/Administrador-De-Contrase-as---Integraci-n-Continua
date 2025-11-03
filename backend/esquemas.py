@@ -1,9 +1,7 @@
-
-
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import Optional
 
-
+# -------- Usuarios --------
 class UsuarioCrear(BaseModel):
     nombre: str
     apellido: str
@@ -15,9 +13,8 @@ class UsuarioMostrar(BaseModel):
     nombre: str
     apellido: str
     correo: EmailStr
-
-    class Config:
-        orm_mode = True
+    # v2: reemplaza orm_mode=True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Token(BaseModel):
@@ -25,6 +22,7 @@ class Token(BaseModel):
     tipo_token: str
 
 
+# -------- Contraseñas --------
 class ContrasenaCrear(BaseModel):
     servicio: str
     usuario_servicio: str
@@ -38,6 +36,14 @@ class ContrasenaMostrar(BaseModel):
     usuario_servicio: str
     url: Optional[str] = None
     notas: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        orm_mode = True
+# (Opcional) Para detalle con la contraseña en claro cuando la pidas expresamente
+class ContrasenaDetalle(BaseModel):
+    id: int
+    servicio: str
+    usuario_servicio: str
+    contrasena: str
+    url: Optional[str] = None
+    notas: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
