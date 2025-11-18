@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   db:
-    image: postgres:16-alpine
+    build: ./database  
     environment:
       POSTGRES_USER: ${DB_USER:-vault}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-vaultpass}
@@ -48,7 +48,7 @@ services:
       - internal_net
 
   jenkins:
-    image: jenkins/jenkins:lts-jdk17
+    build: ./jenkins
     container_name: jenkins
     user: root
     ports:
