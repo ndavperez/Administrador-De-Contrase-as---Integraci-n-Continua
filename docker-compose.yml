@@ -1,4 +1,5 @@
 version: "3.9"
+
 services:
   db:
     image: postgres:16-alpine
@@ -13,6 +14,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - internal_net
 
   api:
     build: ./backend
@@ -32,6 +35,8 @@ services:
         condition: service_healthy
     ports:
       - "5000:5000"
+    networks:
+      - internal_net
 
   frontend:
     build: ./frontend/frontAdministradorcontrasenas
@@ -39,6 +44,29 @@ services:
       - "5173:80"
     depends_on:
       - api
+    networks:
+      - internal_net
+
+  jenkins:
+    image: jenkins/jenkins:lts-jdk17
+    container_name: jenkins
+    user: root
+    ports:
+      - "8080:8080"    # Web de Jenkins
+      - "50000:50000"  # Agentes
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - api
+      - db
+      - frontend
+    networks:
+      - internal_net
 
 volumes:
   pgdata:
+  jenkins_home:
+
+networks:
+  internal_net:

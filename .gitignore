@@ -54,3 +54,5 @@ docker-compose.override.yml
 # === Cache de dependencias ===
 pip-wheel-metadata/
 pip-log.txt
+.venv
+.env.txt
