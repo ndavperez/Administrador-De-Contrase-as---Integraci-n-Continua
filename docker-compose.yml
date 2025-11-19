@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   db:
-    build: ./database  
+    build: ./database
     environment:
       POSTGRES_USER: ${DB_USER:-vault}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-vaultpass}
@@ -10,7 +10,8 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-vault} -d ${DB_NAME:-vaultdb}"]
+      test:
+        ["CMD-SHELL", "pg_isready -U ${DB_USER:-vault} -d ${DB_NAME:-vaultdb}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -33,12 +34,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    ports:
-      - "5001:5000"   # ⬅⬅⬅ ESTA LÍNEA ES LA CLAVE
     networks:
       - internal_net
 
-      
   frontend:
     build: ./frontend/frontAdministradorcontrasenas
     ports:
