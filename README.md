@@ -108,16 +108,16 @@ agent any
 
                       cat > .env <<EOF
 
-DB_USER=${CI_DB_USER}
-DB_PASSWORD=${CI_DB_PASSWORD}
-DB_NAME=${CI_DB_NAME}
-DB_HOST=db
-DB_PORT=5432
-SECRET_KEY=${CI_SECRET_KEY}
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=60
-FERNET_KEY=${CI_FERNET_KEY}
-EOF
+        DB_USER=${CI_DB_USER}
+        DB_PASSWORD=${CI_DB_PASSWORD}
+        DB_NAME=${CI_DB_NAME}
+        DB_HOST=db
+        DB_PORT=5432
+        SECRET_KEY=${CI_SECRET_KEY}
+        ALGORITHM=HS256
+        ACCESS_TOKEN_EXPIRE_MINUTES=60
+        FERNET_KEY=${CI_FERNET_KEY}
+        EOF
 
                       echo "===> Levantando servicios db y api (sin frontend en CI)..."
                       docker compose -f ${COMPOSE_FILE} up -d db api
