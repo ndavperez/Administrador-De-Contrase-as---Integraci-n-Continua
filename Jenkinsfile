@@ -8,7 +8,6 @@ pipeline {
     stages {
         stage('Checkout código') {
             steps {
-                // Usa el repositorio configurado en el  pipeline
                 checkout scm
             }
         }
@@ -24,24 +23,50 @@ pipeline {
 
         stage('Levantar stack (db + api + frontend)') {
             steps {
-                sh '''
-                echo "===> Levantando servicios db, api y frontend..."
-                docker compose -f ${COMPOSE_FILE} up -d db api frontend
+                // Cargar secretos desde el almacén de credenciales de Jenkins
+                withCredentials([
+                    string(credentialsId: 'vault-db-user',       variable: 'CI_DB_USER'),
+                    string(credentialsId: 'vault-db-password',   variable: 'CI_DB_PASSWORD'),
+                    string(credentialsId: 'vault-db-name',       variable: 'CI_DB_NAME'),
+                    string(credentialsId: 'vault-secret-key',    variable: 'CI_SECRET_KEY'),
+                    string(credentialsId: 'vault-fernet-key',    variable: 'CI_FERNET_KEY')
+                ]) {
+                    sh '''
+                      echo "===> Creando archivo .env para CI en Jenkins..."
 
-                echo "===> Esperando a que la API esté lista en http://api:5000/docs ..."
-                # Jenkins corre dentro de la misma red docker, así que usamos el hostname del servicio: api
-                for i in {1..15}; do
-                  if curl -sSf http://api:5000/docs > /dev/null; then
-                    echo "API disponible "
-                    exit 0
-                  fi
-                  echo "API no lista aún, reintento $i/15..."
-                  sleep 5
-                done
+                      cat > .env <<EOF
+DB_USER=${CI_DB_USER}
+DB_PASSWORD=${CI_DB_PASSWORD}
+DB_NAME=${CI_DB_NAME}
+DB_HOST=db
+DB_PORT=5432
+SECRET_KEY=${CI_SECRET_KEY}
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+FERNET_KEY=${CI_FERNET_KEY}
+EOF
 
-                echo "La API no respondió a tiempo"
-                exit 1
-                '''
+                      echo "===> Levantando servicios db, api y frontend..."
+                      docker compose -f ${COMPOSE_FILE} up -d db api frontend
+
+                      echo "===> Esperando a que la API esté lista en http://api:5000/docs ..."
+
+                      i=1
+                      max=15
+                      while [ "$i" -le "$max" ]; do
+                        if curl -sSf http://api:5000/docs > /dev/null 2>&1; then
+                          echo "API disponible en intento $i"
+                          exit 0
+                        fi
+                        echo "API no lista aún, reintento $i/$max..."
+                        i=$((i+1))
+                        sleep 5
+                      done
+
+                      echo "La API no respondió a tiempo"
+                      exit 1
+                    '''
+                }
             }
         }
 
@@ -50,7 +75,6 @@ pipeline {
                 sh '''
                 echo "===> Ejecutando smoke test de registro de usuario..."
 
-                # Llamamos a la API por nombre de servicio dentro de la red docker
                 curl -sSf -X POST \
                   'http://api:5000/usuarios/registro' \
                   -H 'accept: application/json' \
@@ -66,17 +90,13 @@ pipeline {
                 '''
             }
         }
-
-        // Opcional: si luego agregas tests automáticos (pytest, npm test, etc.)
-        // los puedes poner en un stage aparte.
-        // stage('Tests backend/frontend') { ... }
     }
 
     post {
         always {
             echo "===> Limpiando: bajando contenedores..."
             sh '''
-            docker compose -f ${COMPOSE_FILE} down
+            docker compose -f ${COMPOSE_FILE} down || true
             '''
         }
         success {
