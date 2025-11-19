@@ -49,12 +49,12 @@ EOF
                       echo "===> Levantando servicios db, api y frontend..."
                       docker compose -f ${COMPOSE_FILE} up -d db api frontend
 
-                      echo "===> Esperando a que la API esté lista en http://api:5000/docs ..."
+                      echo "===> Esperando a que la API esté lista dentro del contenedor api (http://localhost:5000/docs)..."
 
                       i=1
                       max=15
                       while [ "$i" -le "$max" ]; do
-                        if curl -sSf http://api:5000/docs > /dev/null 2>&1; then
+                        if docker compose -f ${COMPOSE_FILE} exec -T api curl -sSf http://localhost:5000/docs > /dev/null 2>&1; then
                           echo "API disponible en intento $i"
                           exit 0
                         fi
@@ -73,10 +73,10 @@ EOF
         stage('Smoke test /usuarios/registro') {
             steps {
                 sh '''
-                echo "===> Ejecutando smoke test de registro de usuario..."
+                echo "===> Ejecutando smoke test de registro de usuario (desde el contenedor api)..."
 
-                curl -sSf -X POST \
-                  'http://api:5000/usuarios/registro' \
+                docker compose -f ${COMPOSE_FILE} exec -T api curl -sSf -X POST \
+                  'http://localhost:5000/usuarios/registro' \
                   -H 'accept: application/json' \
                   -H 'Content-Type: application/json' \
                   -d '{

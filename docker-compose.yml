@@ -34,10 +34,11 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "5000:5000"
+      - "5001:5000"   # ⬅⬅⬅ ESTA LÍNEA ES LA CLAVE
     networks:
       - internal_net
 
+      
   frontend:
     build: ./frontend/frontAdministradorcontrasenas
     ports:
