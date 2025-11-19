@@ -21,7 +21,7 @@ pipeline {
             }
         }
 
-        stage('Levantar stack (db + api + frontend)') {
+        stage('Levantar stack (db + api)') {
             steps {
                 // Cargar secretos desde el almacén de credenciales de Jenkins
                 withCredentials([
@@ -46,8 +46,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES=60
 FERNET_KEY=${CI_FERNET_KEY}
 EOF
 
-                      echo "===> Levantando servicios db, api y frontend..."
-                      docker compose -f ${COMPOSE_FILE} up -d db api frontend
+                      echo "===> Levantando servicios db y api (sin frontend en CI)..."
+                      docker compose -f ${COMPOSE_FILE} up -d db api
 
                       echo "===> Esperando a que la API esté lista dentro del contenedor api (http://localhost:5000/docs)..."
 
