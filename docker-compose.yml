@@ -34,6 +34,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    ports:
+      - "5001:5000"
     networks:
       - internal_net
 

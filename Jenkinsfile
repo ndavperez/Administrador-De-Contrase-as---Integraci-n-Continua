@@ -69,29 +69,29 @@ EOF
                 }
             }
         }
+stage('Smoke test /usuarios/registro') {
+    steps {
+        sh '''
+        echo "===> Ejecutando smoke test de registro de usuario (desde el contenedor api)..."
 
-        stage('Smoke test /usuarios/registro') {
-            steps {
-                sh '''
-                echo "===> Ejecutando smoke test de registro de usuario (desde el contenedor api)..."
+        EMAIL_CI="ci-user-${BUILD_NUMBER}@example.com"
+        echo "Usando correo: ${EMAIL_CI}"
 
-                docker compose -f ${COMPOSE_FILE} exec -T api curl -sSf -X POST \
-                  'http://localhost:5000/usuarios/registro' \
-                  -H 'accept: application/json' \
-                  -H 'Content-Type: application/json' \
-                  -d '{
-                    "nombre": "CI",
-                    "apellido": "User",
-                    "correo": "ci-user@example.com",
-                    "contrasena": "ci1234"
-                  }'
+        docker compose -f ${COMPOSE_FILE} exec -T api curl -sSf -X POST \
+          "http://localhost:5000/usuarios/registro" \
+          -H "accept: application/json" \
+          -H "Content-Type: application/json" \
+          -d "{
+            \\"nombre\\": \\"CI\\",
+            \\"apellido\\": \\"User\\",
+            \\"correo\\": \\"${EMAIL_CI}\\",
+            \\"contrasena\\": \\"ci1234\\"
+          }"
 
-                echo "Smoke test OK "
-                '''
-            }
-        }
+        echo "Smoke test OK "
+        '''
     }
-
+}
     post {
         always {
             echo "===> Limpiando: bajando contenedores..."

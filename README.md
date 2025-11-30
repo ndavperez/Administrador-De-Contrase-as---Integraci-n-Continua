@@ -26,12 +26,12 @@ Sistema de gestión segura de contraseñas con backend en FastAPI, base de datos
   - **Smoke test** de `/usuarios/registro` desde dentro del contenedor `api`.
   - Limpieza automática con `docker compose down`.
 
-🛠️ Integración Continua con Jenkins + Docker Compose
+## 🛠️ Integración Continua con Jenkins + Docker Compose
 Proyecto: Gestor de Contraseñas – CI Seguro
 
 Este documento describe el proceso completo de Integración Continua (CI) implementado para el proyecto Administrador de Contraseñas, incluyendo configuración de Jenkins, manejo seguro de credenciales, construcción de imágenes Docker, levantamiento del stack controlado, generación del archivo .env y pruebas automáticas.
 
-📌 1. Arquitectura del CI
+### 📌 1. Arquitectura del CI
 
 El pipeline de Jenkins ejecuta:
 
