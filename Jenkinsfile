@@ -23,7 +23,6 @@ pipeline {
 
         stage('Levantar stack (db + api)') {
             steps {
-                // Cargar secretos desde el almacén de credenciales de Jenkins
                 withCredentials([
                     string(credentialsId: 'vault-db-user',       variable: 'CI_DB_USER'),
                     string(credentialsId: 'vault-db-password',   variable: 'CI_DB_PASSWORD'),
@@ -69,29 +68,28 @@ EOF
                 }
             }
         }
-stage('Smoke test /usuarios/registro') {
-    steps {
-        sh '''
-        echo "===> Ejecutando smoke test de registro de usuario (desde el contenedor api)..."
 
-        EMAIL_CI="ci-user-${BUILD_NUMBER}@example.com"
-        echo "Usando correo: ${EMAIL_CI}"
+        stage('Smoke test /usuarios/registro') {
+            steps {
+                sh '''
+                echo "===> Ejecutando smoke test de registro de usuario (desde el contenedor api)..."
 
-        docker compose -f ${COMPOSE_FILE} exec -T api curl -sSf -X POST \
-          "http://localhost:5000/usuarios/registro" \
-          -H "accept: application/json" \
-          -H "Content-Type: application/json" \
-          -d "{
-            \\"nombre\\": \\"CI\\",
-            \\"apellido\\": \\"User\\",
-            \\"correo\\": \\"${EMAIL_CI}\\",
-            \\"contrasena\\": \\"ci1234\\"
-          }"
+                # Correo único por build de Jenkins
+                EMAIL_CI="ci-user-${BUILD_NUMBER}@example.com"
+                echo "Usando correo: ${EMAIL_CI}"
 
-        echo "Smoke test OK "
-        '''
+                docker compose -f ${COMPOSE_FILE} exec -T api curl -sSf -X POST \
+                  http://localhost:5000/usuarios/registro \
+                  -H "accept: application/json" \
+                  -H "Content-Type: application/json" \
+                  -d "{\"nombre\":\"CI\",\"apellido\":\"User\",\"correo\":\"${EMAIL_CI}\",\"contrasena\":\"ci1234\"}"
+
+                echo "Smoke test OK"
+                '''
+            }
+        }
     }
-}
+
     post {
         always {
             echo "===> Limpiando: bajando contenedores..."
