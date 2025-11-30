@@ -49,7 +49,7 @@ Limpieza del entorno
 
 El frontend se construye, pero no se levanta en CI para evitar conflictos de puertos y porque no es necesario para las pruebas.
 
-🔐 2. Credenciales Configuradas en Jenkins
+### 🔐 2. Credenciales Configuradas en Jenkins
 
 En:
 
@@ -67,7 +67,7 @@ Se crearon los siguientes secretos:
 
 Estas credenciales se inyectan automáticamente en el archivo .env.
 
-📄 3. Jenkinsfile Final
+### 📄 3. Jenkinsfile Final
 
 pipeline {
 agent any
@@ -181,7 +181,7 @@ agent any
 
 }
 
-⚙️ 4. Cómo se genera el archivo .env
+### ⚙️ 4. Cómo se genera el archivo .env
 
 Jenkins no necesita ningún .env dentro del repositorio.
 
@@ -207,7 +207,7 @@ Solo existe durante el pipeline
 
 Se elimina al finalizar
 
-🚀 5. Levantamiento del Stack en CI
+### 🚀 5. Levantamiento del Stack en CI
 
 Sólo se levantan los servicios:
 
@@ -215,7 +215,7 @@ Sólo se levantan los servicios:
 
 El frontend no se levanta en CI para evitar conflictos y porque no afecta las pruebas.
 
-🔍 6. Healthcheck Interno
+### 🔍 6. Healthcheck Interno
 
 El pipeline espera a que la API responda:
 
@@ -223,7 +223,7 @@ El pipeline espera a que la API responda:
 
 Se reintenta 15 veces cada 5 segundos.
 
-🧪 7. Smoke Test Automático
+### 🧪 7. Smoke Test Automático
 
 Una vez la API está lista, Jenkins ejecuta el siguiente test:
 
@@ -233,7 +233,7 @@ Una vez la API está lista, Jenkins ejecuta el siguiente test:
 
 Si responde correctamente → CI aprobado.
 
-🧹 8. Limpieza Automática
+### 🧹 8. Limpieza Automática
 
 Siempre se ejecuta:
 
@@ -247,7 +247,7 @@ Sin puertos ocupados
 
 Sin estado previo contaminando nuevas pruebas
 
-🧰 9. Probar Localmente Antes del Commit
+### 🧰 9. Probar Localmente Antes del Commit
 
 1. Crear .env local
 
@@ -267,7 +267,7 @@ Sin estado previo contaminando nuevas pruebas
    -H "Content-Type: application/json" \
    -d '{"nombre":"Test"}'
 
-🔒 10. Checklist de Seguridad Implementado
+### 🔒 10. Checklist de Seguridad Implementado
 
 -Sin secretos en GitHub
 
@@ -281,7 +281,7 @@ Sin estado previo contaminando nuevas pruebas
 
 -Docker Compose aislado
 
-📚 11. Dependencias
+### 📚 11. Dependencias
 
 -Jenkins Pipeline
 
