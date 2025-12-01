@@ -2,11 +2,11 @@ pipeline {
     agent any
 
     environment {
-        COMPOSE_BASE = 'docker-compose.yml'
-        COMPOSE_CI   = 'docker-compose.ci.yml'
+        COMPOSE_FILE = 'docker-compose.yml'
     }
 
     stages {
+
         stage('Checkout código') {
             steps {
                 checkout scm
@@ -17,7 +17,7 @@ pipeline {
             steps {
                 sh '''
                 echo "===> Construyendo imágenes de api y frontend..."
-                docker compose -f ${COMPOSE_BASE} -f ${COMPOSE_CI} build api frontend
+                docker compose -f docker-compose.yml -f docker-compose.ci.yml build api frontend
                 '''
             }
         }
@@ -25,11 +25,11 @@ pipeline {
         stage('Levantar stack (db + api)') {
             steps {
                 withCredentials([
-                    string(credentialsId: 'vault-db-user',     variable: 'CI_DB_USER'),
-                    string(credentialsId: 'vault-db-password', variable: 'CI_DB_PASSWORD'),
-                    string(credentialsId: 'vault-db-name',     variable: 'CI_DB_NAME'),
-                    string(credentialsId: 'vault-secret-key',  variable: 'CI_SECRET_KEY'),
-                    string(credentialsId: 'vault-fernet-key',  variable: 'CI_FERNET_KEY')
+                    string(credentialsId: 'vault-db-user',       variable: 'CI_DB_USER'),
+                    string(credentialsId: 'vault-db-password',   variable: 'CI_DB_PASSWORD'),
+                    string(credentialsId: 'vault-db-name',       variable: 'CI_DB_NAME'),
+                    string(credentialsId: 'vault-secret-key',    variable: 'CI_SECRET_KEY'),
+                    string(credentialsId: 'vault-fernet-key',    variable: 'CI_FERNET_KEY')
                 ]) {
                     sh '''
                     echo "===> Creando archivo .env para CI en Jenkins..."
@@ -44,21 +44,17 @@ SECRET_KEY=${CI_SECRET_KEY}
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 FERNET_KEY=${CI_FERNET_KEY}
-UVICORN_HOST=0.0.0.0
-UVICORN_PORT=5000
-ENVIRONMENT=ci
-API_PORT=5500
 EOF
 
                     echo "===> Levantando servicios db y api (sin frontend en CI)..."
-                    docker compose -f ${COMPOSE_BASE} -f ${COMPOSE_CI} up -d db api
+                    docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d db api
 
                     echo "===> Esperando a que la API esté lista dentro del contenedor api (http://localhost:5000/docs)..."
 
                     i=1
                     max=15
                     while [ "$i" -le "$max" ]; do
-                      if docker compose -f ${COMPOSE_BASE} -f ${COMPOSE_CI} exec -T api curl -sSf http://localhost:5000/docs > /dev/null 2>&1; then
+                      if docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T api curl -sSf http://localhost:5000/docs > /dev/null 2>&1; then
                         echo "API disponible en intento $i"
                         exit 0
                       fi
@@ -68,37 +64,37 @@ EOF
                     done
 
                     echo "La API no respondió a tiempo"
-                    docker compose -f ${COMPOSE_BASE} -f ${COMPOSE_CI} logs api || true
                     exit 1
                     '''
                 }
             }
         }
 
-stage('Smoke test /usuarios/registro') {
-    steps {
-        sh '''
-        echo "===> Ejecutando smoke test de registro de usuario (desde el contenedor api)..."
+        stage('Smoke test /usuarios/registro') {
+            steps {
+                sh '''
+                echo "===> Ejecutando smoke test de registro de usuario (desde el contenedor api)..."
 
-        EMAIL_CI="ci-user-${BUILD_NUMBER}@example.com"
-        echo "Usando correo: ${EMAIL_CI}"
+                EMAIL_CI="ci-user-${BUILD_NUMBER}@example.com"
+                echo "Usando correo: ${EMAIL_CI}"
 
-        docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T api \
-          curl -v -X POST http://localhost:5000/usuarios/registro \
-          -H "accept: application/json" \
-          -H "Content-Type: application/json" \
-          -d "{\\"nombre\\":\\"CI\\",\\"apellido\\":\\"User\\",\\"correo\\":\\"${EMAIL_CI}\\",\\"contrasena\\":\\"ci1234\\"}"
+                docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T api \
+                  curl -v -X POST http://localhost:5000/usuarios/registro \
+                  -H "accept: application/json" \
+                  -H "Content-Type: application/json" \
+                  -d "{\\"nombre\\":\\"CI\\",\\"apellido\\":\\"User\\",\\"correo\\":\\"${EMAIL_CI}\\",\\"contrasena\\":\\"ci1234\\"}"
 
-        echo "Smoke test OK"
-        '''
+                echo "Smoke test OK"
+                '''
+            }
+        }
     }
-}
 
     post {
         always {
             echo "===> Limpiando: bajando contenedores..."
             sh '''
-            docker compose -f ${COMPOSE_BASE} -f ${COMPOSE_CI} down || true
+            docker compose -f docker-compose.yml -f docker-compose.ci.yml down || true
             '''
         }
         success {
