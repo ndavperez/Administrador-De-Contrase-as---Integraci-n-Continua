@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        // Usaremos docker-compose base + override de CI
         COMPOSE_BASE = 'docker-compose.yml'
         COMPOSE_CI   = 'docker-compose.ci.yml'
     }
@@ -48,6 +47,7 @@ FERNET_KEY=${CI_FERNET_KEY}
 UVICORN_HOST=0.0.0.0
 UVICORN_PORT=5000
 ENVIRONMENT=ci
+API_PORT=5500
 EOF
 
                     echo "===> Levantando servicios db y api (sin frontend en CI)..."
@@ -80,7 +80,6 @@ EOF
                 sh '''
                 echo "===> Ejecutando smoke test de registro de usuario (desde el contenedor api)..."
 
-                # Correo único por build de Jenkins
                 EMAIL_CI="ci-user-${BUILD_NUMBER}@example.com"
                 echo "Usando correo: ${EMAIL_CI}"
 
