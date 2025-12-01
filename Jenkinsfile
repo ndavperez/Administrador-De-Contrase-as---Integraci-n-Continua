@@ -2,10 +2,22 @@ pipeline {
     agent any
 
     environment {
-        COMPOSE_FILE = 'docker-compose.yml'
+        COMPOSE_PROJECT_NAME = "vault-ci-${BUILD_NUMBER}"
     }
 
     stages {
+        stage('Limpiar') {
+            steps {
+                sh '''
+                echo "===> Desactivando override para CI..."
+                [ -f docker-compose.override.yml ] && mv docker-compose.override.yml docker-compose.override.yml.bak || true
+                
+                echo "===> Limpiando contenedores previos..."
+                docker compose down -v --remove-orphans 2>/dev/null || true
+                sleep 2
+                '''
+            }
+        }
 
         stage('Checkout código') {
             steps {
@@ -13,11 +25,11 @@ pipeline {
             }
         }
 
-        stage('Build imágenes Docker') {
+        stage('Build imágenes') {
             steps {
                 sh '''
-                echo "===> Construyendo imágenes de api y frontend..."
-                docker compose -f docker-compose.yml -f docker-compose.ci.yml build api frontend
+                echo "===> Construyendo imágenes..."
+                docker compose build api db
                 '''
             }
         }
@@ -25,15 +37,13 @@ pipeline {
         stage('Levantar stack (db + api)') {
             steps {
                 withCredentials([
-                    string(credentialsId: 'vault-db-user',       variable: 'CI_DB_USER'),
-                    string(credentialsId: 'vault-db-password',   variable: 'CI_DB_PASSWORD'),
-                    string(credentialsId: 'vault-db-name',       variable: 'CI_DB_NAME'),
-                    string(credentialsId: 'vault-secret-key',    variable: 'CI_SECRET_KEY'),
-                    string(credentialsId: 'vault-fernet-key',    variable: 'CI_FERNET_KEY')
+                    string(credentialsId: 'vault-db-user', variable: 'CI_DB_USER'),
+                    string(credentialsId: 'vault-db-password', variable: 'CI_DB_PASSWORD'),
+                    string(credentialsId: 'vault-db-name', variable: 'CI_DB_NAME'),
+                    string(credentialsId: 'vault-secret-key', variable: 'CI_SECRET_KEY'),
+                    string(credentialsId: 'vault-fernet-key', variable: 'CI_FERNET_KEY')
                 ]) {
                     sh '''
-                    echo "===> Creando archivo .env para CI en Jenkins..."
-
                     cat > .env <<EOF
 DB_USER=${CI_DB_USER}
 DB_PASSWORD=${CI_DB_PASSWORD}
@@ -46,25 +56,11 @@ ACCESS_TOKEN_EXPIRE_MINUTES=60
 FERNET_KEY=${CI_FERNET_KEY}
 EOF
 
-                    echo "===> Levantando servicios db y api (sin frontend en CI)..."
-                    docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d db api
+                    echo "===> Levantando servicios (SIN puertos expuestos)..."
+                    docker compose up -d db api
 
-                    echo "===> Esperando a que la API esté lista dentro del contenedor api (http://localhost:5000/docs)..."
-
-                    i=1
-                    max=15
-                    while [ "$i" -le "$max" ]; do
-                      if docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T api curl -sSf http://localhost:5000/docs > /dev/null 2>&1; then
-                        echo "API disponible en intento $i"
-                        exit 0
-                      fi
-                      echo "API no lista aún, reintento $i/$max..."
-                      i=$((i+1))
-                      sleep 5
-                    done
-
-                    echo "La API no respondió a tiempo"
-                    exit 1
+                    echo "===> Esperando a que DB esté ready..."
+                    sleep 5
                     '''
                 }
             }
@@ -73,18 +69,31 @@ EOF
         stage('Smoke test /usuarios/registro') {
             steps {
                 sh '''
-                echo "===> Ejecutando smoke test de registro de usuario (desde el contenedor api)..."
+                echo "===> Ejecutando smoke test..."
 
                 EMAIL_CI="ci-user-${BUILD_NUMBER}@example.com"
-                echo "Usando correo: ${EMAIL_CI}"
+                echo "Email: ${EMAIL_CI}"
 
-                docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T api \
-                  curl -v -X POST http://localhost:5000/usuarios/registro \
-                  -H "accept: application/json" \
-                  -H "Content-Type: application/json" \
-                  -d "{\\"nombre\\":\\"CI\\",\\"apellido\\":\\"User\\",\\"correo\\":\\"${EMAIL_CI}\\",\\"contrasena\\":\\"ci1234\\"}"
+                for i in {1..15}; do
+                    if docker compose exec -T api curl -sSf http://localhost:5000/docs > /dev/null 2>&1; then
+                        echo "✓ API disponible en intento $i"
+                        
+                        docker compose exec -T api \
+                          curl -X POST http://localhost:5000/usuarios/registro \
+                          -H "Content-Type: application/json" \
+                          -d "{\\"nombre\\":\\"CI\\",\\"apellido\\":\\"User\\",\\"correo\\":\\"${EMAIL_CI}\\",\\"contrasena\\":\\"ci1234\\"}"
+                        
+                        echo ""
+                        echo "✓ Smoke test completado exitosamente"
+                        exit 0
+                    fi
+                    echo "Intento $i/15 - esperando a API..."
+                    sleep 2
+                done
 
-                echo "Smoke test OK"
+                echo "❌ API no respondió a tiempo"
+                docker compose logs api || true
+                exit 1
                 '''
             }
         }
@@ -92,16 +101,19 @@ EOF
 
     post {
         always {
-            echo "===> Limpiando: bajando contenedores..."
             sh '''
-            docker compose -f docker-compose.yml -f docker-compose.ci.yml down || true
+            echo "===> Limpiando contenedores..."
+            docker compose down -v --remove-orphans 2>/dev/null || true
+            
+            echo "===> Restaurando override para desarrollo..."
+            [ -f docker-compose.override.yml.bak ] && mv docker-compose.override.yml.bak docker-compose.override.yml || true
             '''
         }
         success {
-            echo "Pipeline completado correctamente"
+            echo "✓ Pipeline completado correctamente"
         }
         failure {
-            echo "Pipeline falló, revisar logs en Jenkins"
+            echo "❌ Pipeline falló - revisar logs"
         }
     }
 }
