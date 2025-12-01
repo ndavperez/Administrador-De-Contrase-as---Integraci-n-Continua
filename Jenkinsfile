@@ -2,6 +2,7 @@ pipeline {
     agent any
 
     environment {
+        // Usaremos docker-compose base + override de CI
         COMPOSE_BASE = 'docker-compose.yml'
         COMPOSE_CI   = 'docker-compose.ci.yml'
     }
@@ -25,16 +26,16 @@ pipeline {
         stage('Levantar stack (db + api)') {
             steps {
                 withCredentials([
-                    string(credentialsId: 'vault-db-user',       variable: 'CI_DB_USER'),
-                    string(credentialsId: 'vault-db-password',   variable: 'CI_DB_PASSWORD'),
-                    string(credentialsId: 'vault-db-name',       variable: 'CI_DB_NAME'),
-                    string(credentialsId: 'vault-secret-key',    variable: 'CI_SECRET_KEY'),
-                    string(credentialsId: 'vault-fernet-key',    variable: 'CI_FERNET_KEY')
+                    string(credentialsId: 'vault-db-user',     variable: 'CI_DB_USER'),
+                    string(credentialsId: 'vault-db-password', variable: 'CI_DB_PASSWORD'),
+                    string(credentialsId: 'vault-db-name',     variable: 'CI_DB_NAME'),
+                    string(credentialsId: 'vault-secret-key',  variable: 'CI_SECRET_KEY'),
+                    string(credentialsId: 'vault-fernet-key',  variable: 'CI_FERNET_KEY')
                 ]) {
                     sh '''
-                      echo "===> Creando archivo .env para CI en Jenkins..."
+                    echo "===> Creando archivo .env para CI en Jenkins..."
 
-                      cat > .env <<EOF
+                    cat > .env <<EOF
 DB_USER=${CI_DB_USER}
 DB_PASSWORD=${CI_DB_PASSWORD}
 DB_NAME=${CI_DB_NAME}
@@ -44,27 +45,31 @@ SECRET_KEY=${CI_SECRET_KEY}
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 FERNET_KEY=${CI_FERNET_KEY}
+UVICORN_HOST=0.0.0.0
+UVICORN_PORT=5000
+ENVIRONMENT=ci
 EOF
 
-                      echo "===> Levantando servicios db y api (sin frontend en CI)..."
-                      docker compose -f ${COMPOSE_BASE} -f ${COMPOSE_CI} up -d db api
+                    echo "===> Levantando servicios db y api (sin frontend en CI)..."
+                    docker compose -f ${COMPOSE_BASE} -f ${COMPOSE_CI} up -d db api
 
-                      echo "===> Esperando a que la API esté lista dentro del contenedor api (http://localhost:5000/docs)..."
+                    echo "===> Esperando a que la API esté lista dentro del contenedor api (http://localhost:5000/docs)..."
 
-                      i=1
-                      max=15
-                      while [ "$i" -le "$max" ]; do
-                        if docker compose -f ${COMPOSE_BASE} -f ${COMPOSE_CI} exec -T api curl -sSf http://localhost:5000/docs > /dev/null 2>&1; then
-                          echo "API disponible en intento $i"
-                          exit 0
-                        fi
-                        echo "API no lista aún, reintento $i/$max..."
-                        i=$((i+1))
-                        sleep 5
-                      done
+                    i=1
+                    max=15
+                    while [ "$i" -le "$max" ]; do
+                      if docker compose -f ${COMPOSE_BASE} -f ${COMPOSE_CI} exec -T api curl -sSf http://localhost:5000/docs > /dev/null 2>&1; then
+                        echo "API disponible en intento $i"
+                        exit 0
+                      fi
+                      echo "API no lista aún, reintento $i/$max..."
+                      i=$((i+1))
+                      sleep 5
+                    done
 
-                      echo "La API no respondió a tiempo"
-                      exit 1
+                    echo "La API no respondió a tiempo"
+                    docker compose -f ${COMPOSE_BASE} -f ${COMPOSE_CI} logs api || true
+                    exit 1
                     '''
                 }
             }
@@ -75,6 +80,7 @@ EOF
                 sh '''
                 echo "===> Ejecutando smoke test de registro de usuario (desde el contenedor api)..."
 
+                # Correo único por build de Jenkins
                 EMAIL_CI="ci-user-${BUILD_NUMBER}@example.com"
                 echo "Usando correo: ${EMAIL_CI}"
 
