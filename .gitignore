@@ -56,3 +56,5 @@ pip-wheel-metadata/
 pip-log.txt
 .venv
 .env.txt
+
+docker-compose.override.yml
