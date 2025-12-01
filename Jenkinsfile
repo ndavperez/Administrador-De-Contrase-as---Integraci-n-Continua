@@ -75,35 +75,24 @@ EOF
             }
         }
 
-        stage('Smoke test /usuarios/registro') {
-            steps {
-                sh '''
-                echo "===> Ejecutando smoke test de registro de usuario (desde el contenedor api)..."
+stage('Smoke test /usuarios/registro') {
+    steps {
+        sh '''
+        echo "===> Ejecutando smoke test de registro de usuario (desde el contenedor api)..."
 
-                # Correo único por build de Jenkins
-                EMAIL_CI="ci-user-${BUILD_NUMBER}@example.com"
-                echo "Usando correo: ${EMAIL_CI}"
+        EMAIL_CI="ci-user-${BUILD_NUMBER}@example.com"
+        echo "Usando correo: ${EMAIL_CI}"
 
-                JSON_DATA=$(cat <<EOF
-        {
-        "nombre": "CI",
-        "apellido": "User",
-        "correo": "${EMAIL_CI}",
-        "contrasena": "ci1234"
-        }
-        EOF
-        )
+        docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T api \
+          curl -v -X POST http://localhost:5000/usuarios/registro \
+          -H "accept: application/json" \
+          -H "Content-Type: application/json" \
+          -d "{\\"nombre\\":\\"CI\\",\\"apellido\\":\\"User\\",\\"correo\\":\\"${EMAIL_CI}\\",\\"contrasena\\":\\"ci1234\\"}"
 
-                docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T api curl -sSf -X POST \
-                http://localhost:5000/usuarios/registro \
-                -H "accept: application/json" \
-                -H "Content-Type: application/json" \
-                -d "${JSON_DATA}"
-
-                echo "Smoke test OK"
-                '''
-            }
+        echo "Smoke test OK"
+        '''
     }
+}
 
     post {
         always {
