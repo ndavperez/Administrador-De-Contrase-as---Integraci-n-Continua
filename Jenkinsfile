@@ -2,7 +2,8 @@ pipeline {
     agent any
 
     environment {
-        COMPOSE_FILE = 'docker-compose.yml:docker-compose.ci.yml'
+        COMPOSE_BASE = 'docker-compose.yml'
+        COMPOSE_CI   = 'docker-compose.ci.yml'
     }
 
     stages {
@@ -16,7 +17,7 @@ pipeline {
             steps {
                 sh '''
                 echo "===> Construyendo imágenes de api y frontend..."
-                docker compose -f ${COMPOSE_FILE} build api frontend
+                docker compose -f ${COMPOSE_BASE} -f ${COMPOSE_CI} build api frontend
                 '''
             }
         }
@@ -46,14 +47,14 @@ FERNET_KEY=${CI_FERNET_KEY}
 EOF
 
                       echo "===> Levantando servicios db y api (sin frontend en CI)..."
-                      docker compose -f ${COMPOSE_FILE} up -d db api
+                      docker compose -f ${COMPOSE_BASE} -f ${COMPOSE_CI} up -d db api
 
                       echo "===> Esperando a que la API esté lista dentro del contenedor api (http://localhost:5000/docs)..."
 
                       i=1
                       max=15
                       while [ "$i" -le "$max" ]; do
-                        if docker compose -f ${COMPOSE_FILE} exec -T api curl -sSf http://localhost:5000/docs > /dev/null 2>&1; then
+                        if docker compose -f ${COMPOSE_BASE} -f ${COMPOSE_CI} exec -T api curl -sSf http://localhost:5000/docs > /dev/null 2>&1; then
                           echo "API disponible en intento $i"
                           exit 0
                         fi
@@ -74,11 +75,10 @@ EOF
                 sh '''
                 echo "===> Ejecutando smoke test de registro de usuario (desde el contenedor api)..."
 
-                # Correo único por build de Jenkins
                 EMAIL_CI="ci-user-${BUILD_NUMBER}@example.com"
                 echo "Usando correo: ${EMAIL_CI}"
 
-                docker compose -f ${COMPOSE_FILE} exec -T api curl -sSf -X POST \
+                docker compose -f ${COMPOSE_BASE} -f ${COMPOSE_CI} exec -T api curl -sSf -X POST \
                   http://localhost:5000/usuarios/registro \
                   -H "accept: application/json" \
                   -H "Content-Type: application/json" \
@@ -94,7 +94,7 @@ EOF
         always {
             echo "===> Limpiando: bajando contenedores..."
             sh '''
-            docker compose -f ${COMPOSE_FILE} down || true
+            docker compose -f ${COMPOSE_BASE} -f ${COMPOSE_CI} down || true
             '''
         }
         success {
