@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         COMPOSE_PROJECT_NAME = "vault-ci-${BUILD_NUMBER}"
+        CODECOV_TOKEN = credentials('codecov-token')  // Agregar credential en Jenkins
     }
 
     stages {
@@ -56,13 +57,49 @@ ACCESS_TOKEN_EXPIRE_MINUTES=60
 FERNET_KEY=${CI_FERNET_KEY}
 EOF
 
-                    echo "===> Levantando servicios (SIN puertos expuestos)..."
+                    echo "===> Levantando servicios..."
                     docker compose up -d db api
 
                     echo "===> Esperando a que DB esté ready..."
                     sleep 5
                     '''
                 }
+            }
+        }
+
+        stage('Ejecutar tests con cobertura') {
+            steps {
+                sh '''
+                echo "===> Ejecutando tests con pytest..."
+                
+                # Instalar dependencias de testing
+                docker compose exec -T api pip install pytest pytest-cov httpx
+                
+                # Ejecutar tests con coverage
+                docker compose exec -T api pytest --cov=. --cov-report=xml --cov-report=term-missing || true
+                
+                # Copiar coverage.xml desde el contenedor
+                docker compose cp api:/app/coverage.xml ./coverage.xml
+                
+                echo "===> Coverage report generado"
+                '''
+            }
+        }
+
+        stage('Upload a Codecov') {
+            steps {
+                sh '''
+                echo "===> Subiendo coverage a Codecov..."
+                
+                # Descargar Codecov uploader
+                curl -Os https://uploader.codecov.io/latest/linux/codecov
+                chmod +x codecov
+                
+                # Upload coverage
+                ./codecov -t ${CODECOV_TOKEN} -f coverage.xml
+                
+                echo "✓ Coverage subido a Codecov"
+                '''
             }
         }
 
@@ -84,15 +121,14 @@ EOF
                           -d "{\\"nombre\\":\\"CI\\",\\"apellido\\":\\"User\\",\\"correo\\":\\"${EMAIL_CI}\\",\\"contrasena\\":\\"ci1234\\"}"
                         
                         echo ""
-                        echo "✓ Smoke test completado exitosamente"
+                        echo "✓ Smoke test completado"
                         exit 0
                     fi
-                    echo "Intento $i/15 - esperando a API..."
+                    echo "Intento $i/15..."
                     sleep 2
                 done
 
-                echo "❌ API no respondió a tiempo"
-                docker compose logs api || true
+                echo "❌ API no respondió"
                 exit 1
                 '''
             }
@@ -105,9 +141,19 @@ EOF
             echo "===> Limpiando contenedores..."
             docker compose down -v --remove-orphans 2>/dev/null || true
             
-            echo "===> Restaurando override para desarrollo..."
+            echo "===> Restaurando override..."
             [ -f docker-compose.override.yml.bak ] && mv docker-compose.override.yml.bak docker-compose.override.yml || true
             '''
+            
+            // Publicar reporte de coverage en Jenkins
+            publishHTML([
+                allowMissing: false,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: '.',
+                reportFiles: 'coverage.xml',
+                reportName: 'Coverage Report'
+            ])
         }
         success {
             echo "✓ Pipeline completado correctamente"
